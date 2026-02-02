@@ -6,6 +6,7 @@ import { auth } from './firebase';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Login from './pages/Login';
+import Settings from './pages/Settings';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -51,7 +52,8 @@ function App() {
               FinTrack <span style={{ color: '#3b82f6' }}>Demo</span>
             </div>
             <Link to="/" style={{ color: '#4b5563', marginRight: '24px', textDecoration: 'none', fontWeight: 500 }}>Dashboard</Link>
-            <Link to="/upload" style={{ color: '#4b5563', textDecoration: 'none', fontWeight: 500 }}>CSV Upload</Link>
+            <Link to="/upload" style={{ color: '#4b5563', marginRight: '24px', textDecoration: 'none', fontWeight: 500 }}>CSV Upload</Link>
+            <Link to="/settings" style={{ color: '#4b5563', textDecoration: 'none', fontWeight: 500 }}>Settings</Link>
             
             {/* User Profile & Logout */}
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -76,6 +78,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/upload" element={<Upload />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
