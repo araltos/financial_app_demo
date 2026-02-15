@@ -45,7 +45,6 @@ export default function Dashboard() {
     console.log("Backend response:", result);
 
     const totalMonthly = parseAmount(result.total_monthly_cost ?? result.totalBalance ?? 0);
-    const count = Number(result.count ?? 0);
 
     // Get the monthly goal from Settings
     const savedGoal = Number(localStorage.getItem("monthly_goal") || 1000);
