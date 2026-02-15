@@ -1,4 +1,137 @@
+import { useEffect, useState } from "react";
+import { api } from "../api";
+
 export default function Dashboard() {
+  const [summary, setSummary] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState("USD");
+
+  // Helper: safe number parsing + formatting
+  function parseAmount(v: any) {
+    if (v === null || v === undefined) return 0;
+    if (typeof v === "number") return v;
+    const n = Number(String(v).replace(/[^0-9.-]+/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function formatCurrency(value: number) {
+    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function getCurrencySymbol(currencyCode: string) {
+    switch (currencyCode) {
+      case "USD": return "$";
+      case "EUR": return "€";
+      case "GBP": return "£";
+      default: return "$";
+    }
+  }
+
+  // Helper: date display
+  function formatDate(value: any) {
+    if (!value) return "N/A";
+    try {
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return String(value);
+      return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return String(value);
+    }
+  }
+
+  // Helper: Process backend data and update state
+  const renderDashboard = (result: any) => {
+    console.log("Backend response:", result);
+
+    const totalMonthly = parseAmount(result.total_monthly_cost ?? result.totalBalance ?? 0);
+    const count = Number(result.count ?? 0);
+
+    setSummary({
+      totalBalance: totalMonthly,
+      monthlySpending: totalMonthly,
+      savingsProgress: count > 0 ? 100 : 0,
+    });
+
+    const rawSubs = Array.isArray(result.subscriptions) ? result.subscriptions : [];
+    const normalized = rawSubs.map((s: any) => {
+      return {
+        date: s.next_billing_date ?? s.start_date ?? s.date ?? s.billing_date ?? null,
+        description: s.name ?? s.plan_type ?? s.description ?? s.title ?? "Subscription",
+        amount: parseAmount(s.amount ?? s.price ?? s.cost ?? 0),
+        raw: s,
+      };
+    });
+
+    setTransactions(normalized);
+  };
+
+  // Main data loading function with caching
+  async function loadData() {
+    // 1. Check Cache first
+    const cached = localStorage.getItem("dash_cache");
+    const cachedTime = localStorage.getItem("dash_cache_time");
+    
+    // If data is less than 1 minute old, use it immediately
+    if (cached && cachedTime && (Date.now() - Number(cachedTime) < 60000)) {
+      console.log("✅ Using cached data (less than 60 seconds old)");
+      const result = JSON.parse(cached);
+      renderDashboard(result);
+      setLoading(false);
+      return;
+    }
+
+    // 2. If no cache or expired, fetch from backend
+    console.log("🔄 Fetching fresh data from backend...");
+    setLoading(true);
+    try {
+      const result = await api.get("/api/subscriptions");
+      localStorage.setItem("dash_cache", JSON.stringify(result));
+      localStorage.setItem("dash_cache_time", Date.now().toString());
+      renderDashboard(result);
+    } catch (err) {
+      console.error("Failed to load dashboard:", err);
+      setSummary({
+        totalBalance: 0,
+        monthlySpending: 0,
+        savingsProgress: 0,
+      });
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    // Load currency preference
+    const savedCurrency = localStorage.getItem("currency");
+    if (savedCurrency) setCurrency(savedCurrency);
+
+    // Initial load
+    loadData();
+
+    // Listen for Upload to notify us that subscriptions changed
+    const handler = () => {
+      // Clear cache so we fetch fresh data
+      localStorage.removeItem("dash_cache");
+      localStorage.removeItem("dash_cache_time");
+      loadData();
+    };
+    window.addEventListener("subscriptionsUpdated", handler);
+    return () => {
+      window.removeEventListener("subscriptionsUpdated", handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "40px" }}>
+        <h1 style={{ fontSize: "36px", fontWeight: 700 }}>Loading dashboard…</h1>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -7,7 +140,7 @@ export default function Dashboard() {
         backgroundColor: "#f5f7fa",
         minHeight: "calc(100vh - 64px)",
         width: "100%",
-        boxSizing: "border-box"
+        boxSizing: "border-box",
       }}
     >
       <header style={{ marginBottom: "30px" }}>
@@ -15,7 +148,7 @@ export default function Dashboard() {
           Welcome Back 👋
         </h1>
         <p style={{ color: "#555", marginTop: "8px", fontSize: "16px" }}>
-          Here’s a quick overview of your financial health today.
+          Here's a quick overview of your financial health today.
         </p>
       </header>
 
@@ -28,7 +161,7 @@ export default function Dashboard() {
           marginBottom: "40px",
         }}
       >
-        {/* Card */}
+        {/* Total Balance */}
         <div
           style={{
             background: "white",
@@ -41,11 +174,11 @@ export default function Dashboard() {
             Total Balance
           </p>
           <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#1a1a1a" }}>
-            $12,450.00
+            {getCurrencySymbol(currency)}{formatCurrency(summary?.totalBalance ?? 0)}
           </h2>
         </div>
 
-        {/* Monthly Spending */}
+        {/* Spending */}
         <div
           style={{
             background: "white",
@@ -58,7 +191,7 @@ export default function Dashboard() {
             Monthly Spending
           </p>
           <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#d9534f" }}>
-            -$3,200.00
+            -{getCurrencySymbol(currency)}{formatCurrency(summary?.monthlySpending ?? 0)}
           </h2>
         </div>
 
@@ -75,7 +208,7 @@ export default function Dashboard() {
             Savings Goal Progress
           </p>
           <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#28a745" }}>
-            85%
+            {summary?.savingsProgress ?? 0}%
           </h2>
         </div>
       </div>
@@ -110,61 +243,47 @@ export default function Dashboard() {
           >
             <thead style={{ background: "#f0f2f5" }}>
               <tr>
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "14px 20px",
-                    color: "#555",
-                    fontWeight: 600,
-                  }}
-                >
-                  Date
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "14px 20px",
-                    color: "#555",
-                    fontWeight: 600,
-                  }}
-                >
+                <th style={{ padding: "14px 20px", color: "#555", textAlign: "left" }}>Date</th>
+                <th style={{ padding: "14px 20px", color: "#555", textAlign: "left" }}>
                   Description
                 </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "14px 20px",
-                    color: "#555",
-                    fontWeight: 600,
-                  }}
-                >
-                  Amount
-                </th>
+                <th style={{ padding: "14px 20px", color: "#555", textAlign: "left" }}>Amount</th>
               </tr>
             </thead>
 
             <tbody>
-              {[
-                { date: "Jan 26, 2026", description: "Apple Store", amount: "-$1,200.00" },
-                { date: "Jan 25, 2026", description: "Starbucks", amount: "-$5.50" },
-              ].map((row, index) => (
-                <tr
-                  key={index}
-                  style={{
-                    borderBottom: "1px solid #eee",
-                    transition: "background 0.2s",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
-                >
-                  <td style={{ padding: "14px 20px" }}>{row.date}</td>
-                  <td style={{ padding: "14px 20px" }}>{row.description}</td>
-                  <td style={{ padding: "14px 20px", color: "#d9534f" }}>
-                    {row.amount}
-                  </td>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ padding: "14px 20px", textAlign: "center" }}>No transactions</td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((row, idx) => (
+                  <tr
+                    key={idx}
+                    style={{
+                      borderBottom: "1px solid #eee",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#f9fafb")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "white")
+                    }
+                  >
+                    <td style={{ padding: "14px 20px" }}>{formatDate(row.date)}</td>
+                    <td style={{ padding: "14px 20px" }}>{row.description}</td>
+                    <td
+                      style={{
+                        padding: "14px 20px",
+                        color: row.amount < 0 ? "#d9534f" : "#28a745",
+                      }}
+                    >
+                      {getCurrencySymbol(currency)}{formatCurrency(row.amount)}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
