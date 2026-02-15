@@ -47,10 +47,20 @@ export default function Dashboard() {
     const totalMonthly = parseAmount(result.total_monthly_cost ?? result.totalBalance ?? 0);
     const count = Number(result.count ?? 0);
 
+    // Get the monthly goal from Settings
+    const savedGoal = Number(localStorage.getItem("monthly_goal") || 1000);
+    
+    // Calculate budget progress (what % of budget is used)
+    const budgetUsed = savedGoal > 0 ? Math.min(100, (totalMonthly / savedGoal) * 100) : 0;
+    
+    // Calculate remaining balance
+    const remainingBalance = savedGoal - totalMonthly;
+
     setSummary({
-      totalBalance: totalMonthly,
+      totalBalance: remainingBalance,
       monthlySpending: totalMonthly,
-      savingsProgress: count > 0 ? 100 : 0,
+      savingsProgress: budgetUsed,
+      monthlyGoal: savedGoal,
     });
 
     const rawSubs = Array.isArray(result.subscriptions) ? result.subscriptions : [];
@@ -95,6 +105,7 @@ export default function Dashboard() {
         totalBalance: 0,
         monthlySpending: 0,
         savingsProgress: 0,
+        monthlyGoal: 1000,
       });
       setTransactions([]);
     } finally {
@@ -132,6 +143,9 @@ export default function Dashboard() {
     );
   }
 
+  // Determine color based on budget usage
+  const budgetColor = (summary?.savingsProgress ?? 0) > 80 ? "#ef4444" : "#28a745";
+
   return (
     <div
       style={{
@@ -161,7 +175,7 @@ export default function Dashboard() {
           marginBottom: "40px",
         }}
       >
-        {/* Total Balance */}
+        {/* Remaining Balance */}
         <div
           style={{
             background: "white",
@@ -171,14 +185,17 @@ export default function Dashboard() {
           }}
         >
           <p style={{ color: "#777", marginBottom: "8px", fontSize: "14px" }}>
-            Total Balance
+            Remaining Balance
           </p>
-          <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#1a1a1a" }}>
+          <h2 style={{ fontSize: "28px", fontWeight: 700, color: summary?.totalBalance >= 0 ? "#28a745" : "#ef4444" }}>
             {getCurrencySymbol(currency)}{formatCurrency(summary?.totalBalance ?? 0)}
           </h2>
+          <p style={{ fontSize: "12px", color: "#999", marginTop: "4px" }}>
+            of {getCurrencySymbol(currency)}{formatCurrency(summary?.monthlyGoal ?? 1000)} budget
+          </p>
         </div>
 
-        {/* Spending */}
+        {/* Monthly Spending */}
         <div
           style={{
             background: "white",
@@ -191,11 +208,14 @@ export default function Dashboard() {
             Monthly Spending
           </p>
           <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#d9534f" }}>
-            -{getCurrencySymbol(currency)}{formatCurrency(summary?.monthlySpending ?? 0)}
+            {getCurrencySymbol(currency)}{formatCurrency(summary?.monthlySpending ?? 0)}
           </h2>
+          <p style={{ fontSize: "12px", color: "#999", marginTop: "4px" }}>
+            Total subscriptions cost
+          </p>
         </div>
 
-        {/* Savings Goal */}
+        {/* Budget Usage */}
         <div
           style={{
             background: "white",
@@ -205,11 +225,14 @@ export default function Dashboard() {
           }}
         >
           <p style={{ color: "#777", marginBottom: "8px", fontSize: "14px" }}>
-            Savings Goal Progress
+            Budget Used
           </p>
-          <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#28a745" }}>
-            {summary?.savingsProgress ?? 0}%
+          <h2 style={{ fontSize: "28px", fontWeight: 700, color: budgetColor }}>
+            {(summary?.savingsProgress ?? 0).toFixed(0)}%
           </h2>
+          <p style={{ fontSize: "12px", color: "#999", marginTop: "4px" }}>
+            {(summary?.savingsProgress ?? 0) > 80 ? "⚠️ Over budget!" : "✅ On track"}
+          </p>
         </div>
       </div>
 

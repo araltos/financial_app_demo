@@ -1,15 +1,35 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { getAuth, signOut } from "firebase/auth";
 
 const Settings: React.FC = () => {
   const auth = getAuth();
   const user = auth.currentUser;
 
+  // Load saved preferences or defaults
+  const [currency, setCurrency] = useState(() => localStorage.getItem("currency") || "USD");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    const val = localStorage.getItem("notificationsEnabled");
+    return val === null ? true : val === "true";
+  });
+  const [monthlyGoal, setMonthlyGoal] = useState(() => localStorage.getItem("monthly_goal") || "1000");
+
+  // Save preferences on change
+  useEffect(() => {
+    localStorage.setItem("currency", currency);
+  }, [currency]);
+
+  useEffect(() => {
+    localStorage.setItem("notificationsEnabled", notificationsEnabled.toString());
+  }, [notificationsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("monthly_goal", monthlyGoal);
+  }, [monthlyGoal]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // This will trigger the Auth listener in App.tsx and show the Login page
-      window.location.href = "/"; 
+      window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -42,14 +62,43 @@ const Settings: React.FC = () => {
 
         {/* Preferences Section */}
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Preferences</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Preferences</h3>
+          
+          {/* Currency Display */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
             <label style={{ fontSize: '14px', fontWeight: '500' }}>Currency Display</label>
-            <select style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', width: '200px' }}>
-              <option>USD ($)</option>
-              <option>EUR (€)</option>
-              <option>GBP (£)</option>
+            <select 
+              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', width: '200px' }}
+              value={currency}
+              onChange={e => setCurrency(e.target.value)}
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
             </select>
+          </div>
+
+          {/* Monthly Budget Goal */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '14px', fontWeight: '500' }}>Monthly Budget Goal</label>
+            <input 
+              type="number" 
+              value={monthlyGoal}
+              onChange={e => setMonthlyGoal(e.target.value)}
+              style={{ 
+                padding: '8px', 
+                borderRadius: '6px', 
+                border: '1px solid #d1d5db', 
+                width: '200px',
+                fontSize: '14px'
+              }}
+              min="0"
+              step="100"
+              placeholder="Enter amount"
+            />
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+              Set your monthly spending limit to track budget progress
+            </p>
           </div>
         </div>
 
@@ -57,7 +106,12 @@ const Settings: React.FC = () => {
         <div style={{ marginBottom: '32px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Notifications</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
-            <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px' }} />
+            <input 
+              type="checkbox" 
+              checked={notificationsEnabled} 
+              onChange={e => setNotificationsEnabled(e.target.checked)} 
+              style={{ width: '18px', height: '18px' }} 
+            />
             <span style={{ fontSize: '14px' }}>Email me weekly financial summaries</span>
           </div>
         </div>
