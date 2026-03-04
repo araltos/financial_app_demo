@@ -63,40 +63,26 @@ export default function Dashboard() {
     });
 
     const rawSubs = Array.isArray(result.subscriptions) ? result.subscriptions : [];
-    const normalized = rawSubs.map((s: any) => {
-      return {
-        date: s.next_billing_date ?? s.start_date ?? s.date ?? s.billing_date ?? null,
-        description: s.name ?? s.plan_type ?? s.description ?? s.title ?? "Subscription",
-        amount: parseAmount(s.amount ?? s.price ?? s.cost ?? 0),
-        raw: s,
-      };
-    });
+
+    // Normalize Jacob's subscription objects
+    const normalized = rawSubs.map((s: any) => ({
+      date: s.next_billing_date || s.start_date,
+      description: s.plan_type,
+      amount: parseAmount(s.amount),
+      raw: s
+    }));
+
+    // Sort by date descending (newest first so ESPN shows at top)
+    normalized.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     setTransactions(normalized);
   };
 
-  // Main data loading function with caching
   async function loadData() {
-    // 1. Check Cache first
-    const cached = localStorage.getItem("dash_cache");
-    const cachedTime = localStorage.getItem("dash_cache_time");
-    
-    // If data is less than 1 minute old, use it immediately
-    if (cached && cachedTime && (Date.now() - Number(cachedTime) < 60000)) {
-      console.log("✅ Using cached data (less than 60 seconds old)");
-      const result = JSON.parse(cached);
-      renderDashboard(result);
-      setLoading(false);
-      return;
-    }
-
-    // 2. If no cache or expired, fetch from backend
     console.log("🔄 Fetching fresh data from backend...");
     setLoading(true);
     try {
       const result = await api.get("/api/subscriptions");
-      localStorage.setItem("dash_cache", JSON.stringify(result));
-      localStorage.setItem("dash_cache_time", Date.now().toString());
       renderDashboard(result);
     } catch (err) {
       console.error("Failed to load dashboard:", err);
