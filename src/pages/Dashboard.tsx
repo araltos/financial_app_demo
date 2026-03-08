@@ -44,15 +44,21 @@ export default function Dashboard() {
   const renderDashboard = (result: any) => {
     console.log("Backend response:", result);
 
-    const totalMonthly = parseAmount(result.total_monthly_cost ?? result.totalBalance ?? 0);
+    // 1. Get all subscriptions from backend
+    const rawSubs = Array.isArray(result.subscriptions) ? result.subscriptions : [];
 
-    // Get the monthly goal from Settings
+    // 2. FILTER: Only keep rows that have a name AND a price > 0
+    // Jacob's DB uses 'plan_type' for the service name
+    const validSubs = rawSubs.filter((s: any) => {
+      const name = s.plan_type || s.name;
+      const amount = parseAmount(s.amount);
+      return name && name.trim() !== "" && amount > 0;
+    });
+
+    // 3. RECALCULATE: Use only valid data for the summary cards
+    const totalMonthly = validSubs.reduce((sum: number, s: any) => sum + parseAmount(s.amount), 0);
     const savedGoal = Number(localStorage.getItem("monthly_goal") || 1000);
-    
-    // Calculate budget progress (what % of budget is used)
     const budgetUsed = savedGoal > 0 ? Math.min(100, (totalMonthly / savedGoal) * 100) : 0;
-    
-    // Calculate remaining balance
     const remainingBalance = savedGoal - totalMonthly;
 
     setSummary({
@@ -62,18 +68,15 @@ export default function Dashboard() {
       monthlyGoal: savedGoal,
     });
 
-    const rawSubs = Array.isArray(result.subscriptions) ? result.subscriptions : [];
-
-    // Normalize Jacob's subscription objects
-    const normalized = rawSubs.map((s: any) => ({
-      // This line is the fix: it checks 'name' first, then 'plan_type'
-      description: s.name || s.plan_type || "Unknown", 
+    // 4. NORMALIZE: Prepare the clean list for the table
+    const normalized = validSubs.map((s: any) => ({
+      description: s.plan_type || s.name || "Unknown", 
       date: s.next_billing_date || s.start_date || "2026-01-01",
       amount: parseAmount(s.amount),
       id: s.id
     }));
 
-    // Sort by date descending (newest first so ESPN shows at top)
+    // 5. SORT: Newest first
     normalized.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     setTransactions(normalized);
