@@ -1,77 +1,71 @@
-import React, { useState } from "react";
-import Papa from "papaparse";
-import { api } from "../api"; 
+import React, { useState, useRef } from "react";
+import axios from "axios";
+import { auth } from "../firebase"; // Ensure this points to your firebase.ts
 
 export default function Upload() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
-  const [parsedData, setParsedData] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setFileName(file.name);
-    setMessage(null);
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const normalized = results.data.map((row: any) => ({
-          name: row.name || "",
-          amount: parseFloat(row.amount) || 0,
-          billing_cycle: row.billing_cycle || "monthly",
-          next_billing_date: row.next_billing_date || ""
-        }));
-        setParsedData(normalized);
-        console.log("Parsed Data:", normalized);
-      }
-    });
+    if (file) {
+      setFileName(file.name);
+      setMessage(null);
+    }
   };
 
   const handleUpload = async () => {
-    if (parsedData.length === 0) {
-      setMessage({ text: "Please select a valid CSV file first.", type: 'error' });
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) {
+      setMessage({ text: "Please select a CSV file first.", type: 'error' });
       return;
     }
 
     setUploading(true);
+    setMessage(null);
+
     try {
-      const payload = {
-        subscriptions: parsedData 
-      };
+      // 1. Get the fresh JWT token from Firebase
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("Not authenticated");
 
-      console.log("Sending Payload:", payload);
+      // 2. Prepare the Multipart Form Data (The "File" Jacob expects)
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const response = await api.post("/api/subscriptions", payload);
+      // 3. Call Jacob's Transaction Service DIRECTLY (Bypassing Gateway as he instructed)
+      const response = await axios.post(
+        "https://transaction-service-258907763578.us-central1.run.app/api/transactions/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
 
-      console.log("Server Response:", response);
-      setMessage({ text: "✅ Successfully uploaded to the Transaction Service!", type: 'success' });
+      console.log("Upload Success:", response.data);
+      setMessage({ text: `✅ Success! ${response.data.parsed_count} rows processed.`, type: 'success' });
       
-      setFileName(null);
-      setParsedData([]);
-
+      // Redirect to dashboard after 2 seconds
       setTimeout(() => {
         window.location.href = "/dashboard";
       }, 2000);
 
     } catch (err: any) {
       console.error("Upload Error:", err);
-      const body = err?.body;
-      let msg = "Upload failed";
-      if (body && body.detail) {
-        msg = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
-      }
-      setMessage({ text: `❌ Error: ${msg}`, type: 'error' });
+      const errorMsg = err.response?.data?.detail || "Upload failed. Check console.";
+      setMessage({ text: `❌ Error: ${errorMsg}`, type: 'error' });
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div style={{ padding: "40px", fontFamily: "Inter, sans-serif", maxWidth: "600px", margin: "0 auto" }}>
+    <div style={{ padding: "40px", maxWidth: "600px", margin: "0 auto", fontFamily: "Inter, sans-serif" }}>
       <h1 style={{ fontSize: "28px", fontWeight: 700, marginBottom: "20px" }}>Upload Transactions</h1>
       
       <div style={{ border: "2px dashed #ccc", padding: "40px", borderRadius: "12px", textAlign: "center", background: "white" }}>
@@ -79,6 +73,7 @@ export default function Upload() {
           type="file" 
           accept=".csv" 
           onChange={handleFileChange} 
+          ref={fileInputRef}
           id="fileInput"
           style={{ display: "none" }}
         />
@@ -102,7 +97,7 @@ export default function Upload() {
           cursor: uploading ? "not-allowed" : "pointer"
         }}
       >
-        {uploading ? "Uploading..." : "Upload to Transaction Service"}
+        {uploading ? "Processing File..." : "Upload to Transaction Service"}
       </button>
 
       {message && (
