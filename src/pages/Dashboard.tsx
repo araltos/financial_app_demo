@@ -66,10 +66,11 @@ export default function Dashboard() {
 
     // Normalize Jacob's subscription objects
     const normalized = rawSubs.map((s: any) => ({
-      date: s.next_billing_date || s.start_date,
-      description: s.plan_type,
+      // This line is the fix: it checks 'name' first, then 'plan_type'
+      description: s.name || s.plan_type || "Unknown", 
+      date: s.next_billing_date || s.start_date || "2026-01-01",
       amount: parseAmount(s.amount),
-      raw: s
+      id: s.id
     }));
 
     // Sort by date descending (newest first so ESPN shows at top)

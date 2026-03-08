@@ -19,7 +19,6 @@ export default function Upload() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        // This maps your Google Sheet columns to the backend
         const normalized = results.data.map((row: any) => ({
           name: row.name || "",
           amount: parseFloat(row.amount) || 0,
@@ -40,7 +39,6 @@ export default function Upload() {
 
     setUploading(true);
     try {
-      // THE FIX: Jacob wants an OBJECT with a 'subscriptions' key
       const payload = {
         subscriptions: parsedData 
       };
@@ -55,7 +53,6 @@ export default function Upload() {
       setFileName(null);
       setParsedData([]);
 
-      // This will refresh the page so the Dashboard shows the new data
       setTimeout(() => {
         window.location.href = "/dashboard";
       }, 2000);
