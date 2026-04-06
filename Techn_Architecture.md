@@ -46,7 +46,7 @@ A critical challenge was ensuring data integrity between the Transaction Service
 The current iteration successfully demonstrates a full-stack cloud-native deployment. 
 - **Planned Enhancements**:
     - **Frontend Validation**: Implementing client-side schema checkers for CSV uploads to reduce server-side load and improve user feedback.
-    - **Telemetry**: Integrating Datadog or Google Cloud Monitoring for advanced service-level observability.
+    - **Advanced Observability**: Transitioning from native Google Cloud Monitoring to a third-party APM like Datadog for cross-service trace analysis and granular performance metrics.
     - **Data Visualization**: Expanding the dashboard to include historical trend analysis via Recharts.
 
 ## 5. Service Deployment and Infrastructure (Cloud Native)
