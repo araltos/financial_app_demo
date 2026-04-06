@@ -42,12 +42,10 @@ A critical challenge was ensuring data integrity between the Transaction Service
 - **CI/CD Pipeline**: Utilized GitHub Actions to automate the build and deployment process to Firebase Hosting upon every merge to the main branch.
 - **Configuration Management**: Managed sensitive API keys and backend endpoints via GitHub Secrets and local environment variables to maintain security standards.
 
-## 4. Retrospective & Future Roadmap
-The current iteration successfully demonstrates a full-stack cloud-native deployment. 
-- **Planned Enhancements**:
-    - **Frontend Validation**: Implementing client-side schema checkers for CSV uploads to reduce server-side load and improve user feedback.
-    - **Advanced Observability**: Transitioning from native Google Cloud Monitoring to a third-party APM like Datadog for cross-service trace analysis and granular performance metrics.
-    - **Data Visualization**: Expanding the dashboard to include historical trend analysis via Recharts.
+## 4. Future Improvements
+*   **File Upload Validation**: Add an automatic check in the browser to ensure the CSV file has the correct columns before it is sent to the server.
+*   **Advanced Monitoring**: Moving from basic Google Cloud tracking to a professional tool like **Datadog** to see exactly how data moves between our 6 different services.
+*   **Enhanced Charts**: Adding more visual graphs to the dashboard, such as spending trends over the last 6 months, using the **Recharts** library.
 
 ## 5. Service Deployment and Infrastructure (Cloud Native)
 The system is decomposed into specialized microservices, each deployed as an independent containerized workload on **Google Cloud Run**. 
