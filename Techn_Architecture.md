@@ -43,8 +43,7 @@ A critical challenge was ensuring data integrity between the Transaction Service
 - **Configuration Management**: Managed sensitive API keys and backend endpoints via GitHub Secrets and local environment variables to maintain security standards.
 
 ## 4. Future Improvements
-*   **File Upload Validation**: Add an automatic check in the browser to ensure the CSV file has the correct columns before it is sent to the server.
-*   **Advanced Monitoring**: Moving from basic Google Cloud tracking to a professional tool like **Datadog** to see exactly how data moves between our 6 different services.
+*   **File Upload Validation**: Add an automatic check in the browser to ensure the CSV file has the correct columns before it is sent to the server. Beyond basic validation, a future improvement would allow the app to accept CSV files in any format or column order. The system would automatically detect and map the uploaded columns to the correct fields, removing the need for the user to follow a specific file structure. This would be achieved by implementing a column mapping engine on the frontend that compares the uploaded headers against the expected schema and attempts to resolve mismatches before sending the request to the backend.
 *   **Enhanced Charts**: Adding more visual graphs to the dashboard, such as spending trends over the last 6 months, using the **Recharts** library.
 
 ## 5. Service Deployment and Infrastructure (Cloud Native)
