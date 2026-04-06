@@ -48,3 +48,19 @@ The current iteration successfully demonstrates a full-stack cloud-native deploy
     - **Frontend Validation**: Implementing client-side schema checkers for CSV uploads to reduce server-side load and improve user feedback.
     - **Telemetry**: Integrating Datadog or Google Cloud Monitoring for advanced service-level observability.
     - **Data Visualization**: Expanding the dashboard to include historical trend analysis via Recharts.
+
+## 5. Service Deployment and Infrastructure (Cloud Native)
+The system is decomposed into specialized microservices, each deployed as an independent containerized workload on **Google Cloud Run**. 
+
+### Managed Services Breakdown:
+- **transaction-service**: Primary ingestion engine for CSV financial data.
+- **subscription-service**: Core logic for calculating recurring expenditures and historical records.
+- **budget-service**: Aggregates data to provide real-time budget utilization metrics.
+- **insight-service**: Provides analytical processing for financial health summaries.
+- **notification-service**: Managed service for asynchronous user alerts and system events.
+- **scheduled-jobs**: Handles background cron tasks for account reconciliations.
+
+### Infrastructure Benefits:
+- **Autoscaling**: Each service scales horizontally based on request traffic.
+- **Isolations**: A failure in the `notification-service` does not impact the core `transaction-service`.
+- **Global Distribution**: All services are deployed in the `us-central1` region for low latency and high availability.
